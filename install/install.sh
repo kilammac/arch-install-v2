@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO_SLUG="kilammac/arch-insall"
-BOOTSTRAP_DIR="/tmp/arch-insall-src"
+REPO_SLUG="kilammac/arch-install-v2"
+BOOTSTRAP_DIR="/tmp/arch-install-v2-src"
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIVE_TOOLS=(gum os-prober)
 NETWORK_PROBE_HOST="archlinux.org"

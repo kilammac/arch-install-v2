@@ -4,17 +4,18 @@
 
 Installateur et ressources de [bboysidou/dotfile_hyperland](https://github.com/bboysidou/dotfile_hyperland), commit `af083563fd37c32ef9fe64adffe058fe19b57f29` du 13 novembre 2026. Les fichiers ont été récupérés depuis GitHub et comparés à la copie locale du dépôt de référence.
 
-Cette version remplace l’architecture personnalisée précédemment utilisée dans `arch-insall`. Aucun changement d’historique forcé n’a été effectué ; la version précédente reste dans l’historique Git et sur la branche locale `archive/installateur-personnalise-3b500a8`.
+Cette version remplace l’architecture personnalisée précédemment utilisée dans `arch-install-v2`. Aucun changement d’historique forcé n’a été effectué ; la version précédente reste dans l’historique Git et sur la branche locale `archive/installateur-personnalise-3b500a8`.
 
 ## Différences dans `install/`
 
 | Fichier | Adaptation |
 |---|---|
-| `install.sh` | Dépôt `kilammac/arch-insall` et dossier d’amorçage `/tmp/arch-insall-src` pour éviter de confondre les sources des deux dépôts. |
+| `install.sh` | Dépôt `kilammac/arch-install-v2` et dossier d’amorçage `/tmp/arch-install-v2-src` pour éviter de confondre les sources des deux dépôts. |
 | `lib/user.sh` | Adresses de récupération/envoi du dépôt personnel et fond initial `Pictures/wallpaper/prefere-arch1.jpg`. |
+| `bundles/00-core.list` | Ajout de `qt6-multimedia`, requis par le lecteur cassette de la configuration Quickshell personnelle. |
 | `README.md` | Adresse de téléchargement de ce dépôt. |
 
-Tous les autres fichiers de `install/` sont identiques octet par octet à la source, notamment `lib/ui.sh`, `lib/state.sh`, `lib/questions.sh`, `lib/disk.sh`, `lib/gpu.sh`, `lib/base.sh`, les listes de paquets et `link.sh`.
+Tous les autres fichiers de `install/` sont identiques octet par octet à la source, notamment `lib/ui.sh`, `lib/state.sh`, `lib/questions.sh`, `lib/disk.sh`, `lib/gpu.sh`, `lib/base.sh`, les autres listes de paquets et `link.sh`.
 
 Le manifeste `tests/bboysidou-install.sha256` provient des fichiers originaux téléchargés. `tests/verifier-adaptation.sh` vérifie leur identité après normalisation des seules différences autorisées ci-dessus. Il vérifie aussi l’affichage de la barre de progression d’origine.
 
@@ -38,8 +39,26 @@ Le manifeste `tests/bboysidou-install.sha256` provient des fichiers originaux t�
 - Comparaison des configurations et des wallpapers avec les sources du système.
 - Recherche de motifs de clés privées et de jetons dans les fichiers destinés à la publication, sans afficher de valeurs sensibles.
 
-Ces vérifications ne constituent pas une nouvelle installation complète depuis l’ISO avec compilation de tous les paquets AUR. Le parcours d’installation est celui de la source indiquée, et n’a pas été réécrit pour cette adaptation.
+Les essais statiques et de simulation ci-dessus sont complétés par l’installation réelle décrite plus bas. Le parcours est celui de la source indiquée ; tous les groupes et paquets AUR n’ont pas été testés.
 
 ## Attribution
 
 Les scripts et ressources de bboysidou conservent leur origine et leurs mentions. Aucune licence n’a été trouvée à la racine de la source examinée ; ce dépôt ne réattribue pas de licence aux contributions et médias de tiers. Les configurations personnelles et les autres programmes restent soumis aux droits et licences de leurs auteurs respectifs.
+
+## Installation réelle de validation
+
+Une installation complète du point d’entrée publié a été exécutée depuis l’ISO Arch du 1er novembre 2026, dans une VM QEMU/OVMF avec un disque virtuel dédié de 40 Gio. Le questionnaire d’origine a été prérempli avec `--answers`, puis les confirmations et les mots de passe ont été fournis sur l’entrée standard ; leurs valeurs ne sont pas publiées. La sortie utilisait l’interface texte originale, avec sa barre de progression.
+
+Choix de test : Btrfs, systemd-boot, utilisateur Bash, groupe core, sans Snapper ni hibernation. Cinq paquets AUR ont été exclus via le mécanisme d’origine (`otf-apple-sf-pro`, `ttf-orbitron`, `ttf-icomoon-feather`, `nmrs`, `nmrs-tui`) ; la construction de yay-bin, le clonage des dotfiles et les autres étapes du parcours ont été exécutés. Cela ne valide pas l’installation de tous les groupes ni de tous les paquets AUR.
+
+Résultats :
+
+- Les étapes `questions`, `disk`, `base`, `system` et `user` sont terminées ; la progression atteint son message final.
+- `/etc` est en `755`, `/etc/profile`, `/etc/passwd` et `/etc/group` en `644`, `/etc/shadow` en `600`.
+- Le shell de login ordinaire lit le profil et résout son nom correctement, avant puis après redémarrage depuis le disque installé sans ISO.
+- Les liens des configurations pointent vers `~/.dotfiles` et l’état du fond d’écran désigne `~/Pictures/wallpaper/prefere-arch1.jpg`.
+- Hyprland charge la configuration personnelle sans erreur retournée par `hyprctl configerrors`.
+- Le premier lancement de Quickshell a révélé l’absence de QtMultimedia pour le lecteur cassette. L’installation du seul paquet `qt6-multimedia` dans la VM a permis le chargement de la configuration et le démarrage du service. Ce paquet est donc ajouté au groupe core, sans réécrire les scripts ni les fichiers personnels.
+- Le rendu de cette VM est logiciel ; les avertissements sur le GPU accéléré, les fréquences CPU ou l’absence de périphériques ne constituent pas des essais de matériel physique.
+
+La comparaison complète avec la source et les essais de téléchargement doivent continuer à passer après chaque adaptation des adresses du dépôt.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-DOTFILES_URL="${DOTFILES_URL:-https://github.com/kilammac/arch-insall.git}"
-DOTFILES_PUSH_URL="${DOTFILES_PUSH_URL:-git@github.com:kilammac/arch-insall.git}"
+DOTFILES_URL="${DOTFILES_URL:-https://github.com/kilammac/arch-install-v2.git}"
+DOTFILES_PUSH_URL="${DOTFILES_PUSH_URL:-git@github.com:kilammac/arch-install-v2.git}"
 DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
 YAY_URL="https://aur.archlinux.org/yay-bin.git"
 TPM_URL="https://github.com/tmux-plugins/tpm"

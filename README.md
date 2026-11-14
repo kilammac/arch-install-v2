@@ -9,8 +9,8 @@ Les configurations Hyprland, Neovim et Quickshell sont celles de kilammac. La co
 Depuis le terminal root de l’ISO Arch Linux démarrée en UEFI, avec Secure Boot désactivé et Internet connecté, dans un nouveau dossier :
 
 ```bash
-cd "$(mktemp -d /tmp/arch-insall-lancement.XXXXXXXX)"
-curl -fsSL https://raw.githubusercontent.com/kilammac/arch-insall/main/install/install.sh -o install.sh
+cd "$(mktemp -d /tmp/arch-install-v2-lancement.XXXXXXXX)"
+curl -fsSL https://raw.githubusercontent.com/kilammac/arch-install-v2/main/install/install.sh -o install.sh
 bash install.sh
 ```
 
@@ -47,3 +47,5 @@ shellcheck -x -P SCRIPTDIR install/install.sh install/link.sh tests/verifier-ada
 ```
 
 Les journaux et la reprise utilisent les emplacements d’origine : `/tmp/installer` sur l’ISO, puis `/var/log/installer.log` sur le système installé.
+
+La seule dépendance ajoutée au groupe de base est `qt6-multimedia`, nécessaire au lecteur cassette de ta configuration Quickshell. Le parcours complet a été testé en VM, jusqu’au redémarrage et au premier login ; les choix et limites de cet essai sont détaillés dans [ADAPTATION.md](ADAPTATION.md).
