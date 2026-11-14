@@ -1,0 +1,7 @@
+#: title=Security
+#: description=ufw (deny incoming), fail2ban, AppArmor, arch-audit
+#: default=on
+ufw
+fail2ban
+apparmor
+arch-audit

@@ -1,4 +1,0 @@
-#%PAM-1.0
-# Authentification du verrou Quickshell avec le mot de passe du compte.
-auth include system-auth
-account include system-auth

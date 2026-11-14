@@ -1,0 +1,7 @@
+[Unit]
+Description=Power Event Handler
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sudo -u __USER__ /usr/local/bin/power_event_handler.sh

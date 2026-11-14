@@ -1,103 +1,315 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-# Le masque privé des téléchargements/journaux ne doit pas être hérité par
-# pacstrap : ses répertoires intermédiaires doivent rester traversables.
-umask 022
-# Ne pas activer xtrace : les mots de passe passent uniquement par passwd.
-DRY_RUN=0; BOOTSTRAP_ONLY=0
-REPO=kilammac/arch-insall; REF=main
-DISK=/dev/vda; HOSTNAME=archlinux; USERNAME=utilisateur
-TIMEZONE=Africa/Algiers; LOCALE=fr_FR.UTF-8; KEYMAP=fr; XKB_LAYOUT=fr
-KERNEL=linux; EXTRA_KERNEL=0; SESSION=console; NVIDIA_MODE=
-TARGET=/mnt
-usage() {
-  cat <<'HELP'
-Usage : bash install.sh [--dry-run] [--repo propriétaire/dépôt] [--ref branche|tag|commit]
-  --branch REF        synonyme de --ref
-  --disk /dev/...     disque illustré dans la simulation uniquement
-  --bootstrap-only   télécharger et vérifier la structure, puis quitter
-  --help             afficher cette aide
-L'installation réelle demande les choix dans des menus puis une confirmation.
-La simulation utilise des réponses d'exemple et ne demande aucun mot de passe.
-HELP
+
+REPO_SLUG="kilammac/arch-insall"
+BOOTSTRAP_DIR="/tmp/arch-insall-src"
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIVE_TOOLS=(gum os-prober)
+NETWORK_PROBE_HOST="archlinux.org"
+STEPS_PARTITION=2
+STEPS_MOUNT=1
+STEPS_BASE=4
+STEPS_SYSTEM=2
+STEPS_USER=10
+
+DRY_RUN=0
+PRESEED=0
+ANSWERS_INPUT=""
+export DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
+
+_usage() {
+  cat <<EOF
+Usage: install.sh [--dry-run] [--answers FILE] [--branch NAME]
+
+Installs Arch Linux with this Hyprland + Quickshell desktop. Run it as root from the Arch ISO.
+  --dry-run       print every command instead of running it; nothing on disk changes
+  --answers FILE  preload answers (lines like A_HOSTNAME=box); those questions are skipped
+  --branch NAME   dotfiles branch to install (default: main)
+EOF
 }
-ARGS=("$@")
-while (($#)); do
-  case "$1" in
-    --dry-run) DRY_RUN=1;;
-    --bootstrap-only) BOOTSTRAP_ONLY=1;;
-    --repo|--ref|--branch|--disk)
-      (($# >= 2)) || { echo "Argument manquant : $1" >&2; exit 2; }
-      case "$1" in --repo) REPO=$2;; --ref|--branch) REF=$2;; --disk) DISK=$2;; esac
-      shift;;
-    --help|-h) usage; exit 0;;
-    *) usage >&2; exit 2;;
-  esac
-  shift
-done
-[[ $REPO =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo 'Dépôt invalide' >&2; exit 2; }
-[[ $REF =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ && $REF != *..* ]] || { echo 'Référence invalide' >&2; exit 2; }
-SELF_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-if [[ ! -f $SELF_DIR/lib/common.sh ]]; then
-  # Ce téléchargement et son extraction dans /tmp sont les seules écritures de l'amorçage.
-  umask 077
-  BOOTSTRAP_DIR=$(mktemp -d /tmp/arch-insall.XXXXXXXX)
-  trap 'rm -rf -- "$BOOTSTRAP_DIR"' EXIT
-  curl --fail --show-error --silent --location --retry 3 --connect-timeout 15 --max-time 180 \
-    "https://codeload.github.com/$REPO/tar.gz/$REF" -o "$BOOTSTRAP_DIR/source.tar.gz"
-  mkdir "$BOOTSTRAP_DIR/source"
-  tar -xzf "$BOOTSTRAP_DIR/source.tar.gz" --strip-components=1 --no-same-owner -C "$BOOTSTRAP_DIR/source"
-  [[ -f $BOOTSTRAP_DIR/source/install/lib/common.sh && -f $BOOTSTRAP_DIR/source/post-install.sh && -d $BOOTSTRAP_DIR/source/configs ]] || { echo 'Archive incomplète' >&2; exit 1; }
-  bash "$BOOTSTRAP_DIR/source/install/install.sh" "${ARGS[@]}"
-  exit $?
+
+_parseArgs() {
+  while (($#)); do
+    case "$1" in
+      --dry-run) DRY_RUN=1 ;;
+      --answers)
+        ANSWERS_INPUT="$(realpath "$2")"
+        PRESEED=1
+        shift
+        ;;
+      --branch)
+        DOTFILES_BRANCH="$2"
+        shift
+        ;;
+      -h | --help)
+        _usage
+        exit 0
+        ;;
+      *)
+        _usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+_bootstrap() {
+  local url="https://codeload.github.com/${REPO_SLUG}/tar.gz/refs/heads/${DOTFILES_BRANCH}"
+  echo "Downloading the installer (${DOTFILES_BRANCH})..."
+  rm -rf "$BOOTSTRAP_DIR"
+  mkdir -p "$BOOTSTRAP_DIR"
+  curl -fsSL --retry 3 "$url" | tar -xz --strip-components=1 -C "$BOOTSTRAP_DIR"
+  exec bash "${BOOTSTRAP_DIR}/install/install.sh" "$@"
+}
+
+_parseArgs "$@"
+if [[ ! -f "${SELF_DIR}/lib/state.sh" ]]; then
+  _bootstrap "$@"
 fi
-PROJECT=$(cd "$SELF_DIR/.." && pwd)
-for module in common ui detect disk packages system configs permissions; do
-  # shellcheck source=/dev/null
-  source "$SELF_DIR/lib/$module.sh"
-done
-if ((BOOTSTRAP_ONLY)); then info "Amorçage vérifié : $REPO, référence $REF"; exit 0; fi
-trap 'printf "Échec à la ligne %s. Consulte le journal ; aucun redémarrage automatique.\n" "$LINENO" >&2' ERR
-if ((!DRY_RUN)); then
-  ((EUID == 0)) || die 'Lance ce script comme root depuis l’ISO Arch Linux.'
-  [[ -d /run/archiso && $(uname -m) == x86_64 ]] || die 'Installation autorisée seulement depuis l’ISO Arch x86_64.'
-  [[ -d /sys/firmware/efi/efivars ]] || die 'Redémarre l’ISO en mode UEFI.'
-  secure_boot=/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c
-  if [[ -r $secure_boot && $(od -An -tu1 -j4 -N1 "$secure_boot" | tr -d ' ') == 1 ]]; then die 'Désactive Secure Boot avant cette installation.'; fi
-  curl -fsSL --connect-timeout 10 --max-time 20 https://archlinux.org/ -o /dev/null || die 'Connecte l’ISO à Internet (iwctl pour le Wi-Fi).'
-  timedatectl set-ntp true
-  pacman -Sy --needed --noconfirm gum gptfdisk btrfs-progs dosfstools pciutils usbutils parted xkeyboard-config
-fi
-if ! command -v lspci >/dev/null || ! command -v lsusb >/dev/null; then die "Détection : pciutils et usbutils requis."; fi
-probe_hardware
-if ((!DRY_RUN)); then questionnaire; validate_disk; else validate_answers; fi
-select_drivers
-collect_packages
-info 'Plan : disque entier, EFI 2 Gio + Btrfs, sans chiffrement ni snapshots.'
-if [[ -b $DISK ]]; then lsblk -d -o NAME,SIZE,MODEL,SERIAL,TRAN "$DISK"; else printf 'Disque illustratif : %s\n' "$DISK"; fi
-printf 'Machine : %s ; utilisateur : %s ; langue : %s ; clavier : %s/%s ; fuseau : %s\n' "$HOSTNAME" "$USERNAME" "$LOCALE" "$KEYMAP" "$XKB_LAYOUT" "$TIMEZONE"
-printf 'CPU : %s ; GPU : %s ; multi-GPU : %s ; NVIDIA : %s ; Wi-Fi : %s ; Bluetooth : %s ; portable : %s ; VM : %s\n' "$HW_CPU" "$HW_GPU_COUNT" "$HW_HYBRID" "${NVIDIA_MODE:-$HW_NVIDIA}" "$HW_WIFI" "$HW_BLUETOOTH" "$HW_LAPTOP" "$HW_VIRT"
-printf 'Paquets : %s\n' "${PACKAGES[*]}"
-printf 'Note : %s\n' "${HW_NOTES[@]}"
-if ((!DRY_RUN)); then
-  preflight_packages
-  confirm "Effacer entièrement $DISK et installer Arch Linux ?" || die 'Annulé.'
-  validate_disk
-  LOG_DIR=$(mktemp -d /tmp/arch-insall-log.XXXXXXXX)
-  LOG_FILE="$LOG_DIR/install.log"
-  install -m600 /dev/null "$LOG_FILE"
-  exec > >(tee -a "$LOG_FILE") 2>&1
-  printf 'Journal : %s\n' "$LOG_FILE"
-fi
-partition_and_mount
-install_system
-install_configs
-verify_permissions
-set_passwords
-if ((!DRY_RUN)); then
-  install -Dm600 "$LOG_FILE" "$TARGET/var/log/arch-insall.log"
-  sync
-fi
-info 'Terminé. Aucun redémarrage automatique.'
-info 'Depuis l’ISO : umount -R /mnt puis reboot. Après connexion : start-hyprland'
-info 'Post-install : bash /opt/arch-insall/post-install.sh'
+
+INSTALLER_DIR="$(cd "${SELF_DIR}/.." && pwd)"
+LIB_DIR="${SELF_DIR}/lib"
+# shellcheck source=lib/state.sh
+source "${LIB_DIR}/state.sh"
+# shellcheck source=lib/ui.sh
+source "${LIB_DIR}/ui.sh"
+# shellcheck source=lib/detect.sh
+source "${LIB_DIR}/detect.sh"
+# shellcheck source=lib/gpu.sh
+source "${LIB_DIR}/gpu.sh"
+# shellcheck source=lib/disk.sh
+source "${LIB_DIR}/disk.sh"
+# shellcheck source=lib/bundles.sh
+source "${LIB_DIR}/bundles.sh"
+# shellcheck source=lib/shells.sh
+source "${LIB_DIR}/shells.sh"
+# shellcheck source=lib/displays.sh
+source "${LIB_DIR}/displays.sh"
+# shellcheck source=lib/boot.sh
+source "${LIB_DIR}/boot.sh"
+# shellcheck source=lib/base.sh
+source "${LIB_DIR}/base.sh"
+# shellcheck source=lib/user.sh
+source "${LIB_DIR}/user.sh"
+# shellcheck source=lib/questions.sh
+source "${LIB_DIR}/questions.sh"
+
+_onExit() {
+  if ((!DRY_RUN)); then
+    removeTempSudoers
+  fi
+}
+
+_onError() {
+  echo "Unexpected failure at line $1: $2" >&2
+  echo "Log: ${LOG_FILE}" >&2
+}
+
+trap _onExit EXIT
+trap '_onError "$LINENO" "$BASH_COMMAND"' ERR
+
+_requireLive() {
+  if ((DRY_RUN)); then
+    if ((EUID != 0)); then uiWarn "Not root: disk and OS probing is limited in this dry run."; fi
+    if [[ ! -d /run/archiso ]]; then uiWarn "Not running from the Arch ISO (fine for a dry run)."; fi
+    return 0
+  fi
+  if ((EUID != 0)); then
+    uiError "Run this as root from the Arch ISO."
+    exit 1
+  fi
+  if [[ ! -d /run/archiso ]]; then
+    uiError "This is not the Arch ISO. Refusing to partition a running system."
+    exit 1
+  fi
+}
+
+_requireFirmware() {
+  if ((!D_UEFI)); then
+    uiError "The machine booted in BIOS/legacy mode. Reboot the ISO in UEFI mode."
+    ((DRY_RUN)) || exit 1
+  fi
+  if ((D_SECURE_BOOT)); then
+    uiError "Secure Boot is on. Disable it in the firmware settings, then run this again."
+    ((DRY_RUN)) || exit 1
+  fi
+  return 0
+}
+
+_requireNetwork() {
+  while ! ping -c 1 -W 3 "$NETWORK_PROBE_HOST" >/dev/null 2>&1; do
+    if ((DRY_RUN)); then
+      uiWarn "No network (ignored in a dry run)."
+      return 0
+    fi
+    uiWarn "No internet connection."
+    if uiConfirm "Open iwctl to connect to Wi-Fi? (station wlan0 connect <SSID>, then exit)" yes; then
+      iwctl || true
+    else
+      exit 1
+    fi
+  done
+  uiOk "Network is up"
+}
+
+_liveTools() {
+  run timedatectl set-ntp true
+  retry run pacman -Sy --noconfirm --needed "${LIVE_TOOLS[@]}"
+}
+
+stagePreflight() {
+  uiHeader "0 · Preflight"
+  _requireLive
+  detectAll
+  gpuWarnVirtual
+  _requireFirmware
+  _requireNetwork
+  if ((!DRY_RUN)) && ! command -v gum >/dev/null 2>&1; then
+    uiStep --verbose "Install installer tools (gum, os-prober)" _liveTools
+    uiInit
+  fi
+}
+
+_offerResume() {
+  if [[ -s "$DONE_FILE" && -s "$ANSWERS_FILE" ]] && ((!PRESEED)); then
+    uiInfo "A previous run finished: $(paste -sd' ' "$DONE_FILE")"
+    if uiConfirm "Resume it with the same answers?" yes; then
+      loadVars "$ANSWERS_FILE"
+      loadVars "$LAYOUT_FILE"
+      PRESEED=1
+      return 0
+    fi
+    resetStages
+  fi
+  return 1
+}
+
+stageQuestions() {
+  uiHeader "1 · Questions"
+  if _offerResume; then
+    askHardware
+    shellDefaults
+    askBoot
+    if ! stageDone system; then
+      askPasswords
+    fi
+    return 0
+  fi
+  if [[ -n "$ANSWERS_INPUT" ]]; then
+    loadVars "$ANSWERS_INPUT"
+  fi
+  askEverything
+  saveAnswers
+  saveLayout
+  markStage questions
+}
+
+stageDisk() {
+  uiHeader "2 · Disk"
+  if ! stageDone disk; then
+    if [[ "$A_MODE" == alongside ]]; then
+      uiStep "Create partitions in the free space of ${A_DISK}" diskApplyAlongside
+    else
+      uiStep "Wipe and partition ${A_DISK}" diskApplyWipe
+    fi
+    loadVars "$LAYOUT_FILE"
+    uiStep "Create btrfs subvolumes" diskCreateSubvolumes
+    markStage disk
+  fi
+  loadVars "$LAYOUT_FILE"
+  uiStep "Mount the new system on ${MNT}" diskMount
+}
+
+stageBase() {
+  uiHeader "3 · Base system"
+  if stageDone base; then return 0; fi
+  uiStep "Prepare pacman on the ISO" baseLivePacman
+  uiStep --optional "Rank the fastest mirrors" baseMirrors
+  uiStep --verbose "Install packages (pacstrap, this takes a while)" basePacstrap
+  uiStep "Write fstab" baseFstab
+  markStage base
+}
+
+stageSystem() {
+  uiHeader "4 · System"
+  if stageDone system; then return 0; fi
+  uiStep "Configure locale, users, drivers and services" systemConfigure
+  uiStep "Install the ${A_BOOT} bootloader" bootInstall
+  markStage system
+}
+
+stageUser() {
+  uiHeader "5 · Your desktop"
+  if stageDone user; then return 0; fi
+  uiStep "Allow AUR builds for ${A_USER} (temporary)" userSudoersOn
+  uiStep --verbose "Build yay" userYay
+  uiStep --verbose "Install AUR packages" userAur
+  if bootLimineScanSelected; then
+    uiStep --optional --verbose "Build limine-scan" bootLimineScan
+  fi
+  if bootSnapperSelected; then
+    uiStep "Snapper and Limine snapshot entries" bootSnapper
+  fi
+  uiStep "Clone and link the dotfiles" userDotfiles
+  uiStep --optional "Create home folders" userDirs
+  uiStep --optional "File manager bookmarks" userBookmarks
+  if shellSelected fish; then
+    uiStep "Fish plugins and your tide prompt" userFish
+  fi
+  uiStep --optional "Default wallpaper" userWallpaper
+  uiStep --optional "tmux plugin manager" userTmux
+  uiStep --optional "Graphite GTK theme" userTheme
+  bundleUserHooks
+  uiStep "Rebuild the initramfs" systemInitramfs
+  uiStep "Remove the temporary sudo rule" userSudoersOff
+  markStage user
+}
+
+stageFinish() {
+  local notes
+  uiHeader "6 · Done"
+  uiProgressDone
+  if ((!DRY_RUN)); then
+    install -Dm600 "$LOG_FILE" "${MNT}/var/log/installer.log"
+  fi
+  notes="$(bootNotes; bundleNotes)"
+  if [[ -n "$notes" ]]; then
+    uiBox "$UI_WARN" <<<"$notes"
+  fi
+  uiOk "Installed. Log in on tty1 as ${A_USER}; Hyprland starts by itself."
+  if ((DRY_RUN)); then return 0; fi
+  if uiConfirm "Unmount and reboot now?" yes; then
+    umount -R "$MNT"
+    reboot
+  fi
+}
+
+_installStepCount() {
+  local total="$STEPS_MOUNT"
+  stageDone disk || total=$((total + STEPS_PARTITION))
+  stageDone base || total=$((total + STEPS_BASE))
+  stageDone system || total=$((total + STEPS_SYSTEM))
+  if ! stageDone user; then
+    total=$((total + STEPS_USER + $(bundleUserStepCount) + $(shellUserStepCount) + $(bootUserStepCount)))
+  fi
+  echo "$total"
+}
+
+main() {
+  local subtitle="interactive installer"
+  if ((DRY_RUN)); then subtitle+=" · dry run"; fi
+  stateInit
+  uiInit
+  uiBanner "Arch · Hyprland · Quickshell" "$subtitle"
+  stagePreflight
+  stageQuestions
+  UI_STEP_TOTAL="$(_installStepCount)"
+  stageDisk
+  stageBase
+  stageSystem
+  stageUser
+  stageFinish
+}
+
+main

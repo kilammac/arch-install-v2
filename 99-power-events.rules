@@ -1,0 +1,2 @@
+SUBSYSTEM=="power_supply", KERNEL=="ADP0", ATTR{online}=="0", RUN+="/usr/local/bin/power_event_handler.sh"
+SUBSYSTEM=="power_supply", KERNEL=="ADP0", ATTR{online}=="1", RUN+="/usr/local/bin/power_event_handler.sh"

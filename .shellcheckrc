@@ -1,4 +1,0 @@
-# Variables partagées entre les modules chargés dynamiquement.
-disable=SC2034,SC2153
-# Apostrophes typographiques françaises dans les messages littéraux.
-disable=SC1112

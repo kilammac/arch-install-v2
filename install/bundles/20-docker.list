@@ -1,0 +1,6 @@
+#: title=Docker
+#: description=Docker engine + compose (rootless by default)
+#: default=on
+docker
+docker-compose
+docker-buildx

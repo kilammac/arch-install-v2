@@ -1,11 +1,36 @@
-# Le prompt de travail contient des chemins locaux et reste privé.
-/PROMPT.md
+custom_scripts/gitignore
+custom_scripts/saved_sessions*
+cliphist/
+fish/fishd.tmp*
+fish/fish_variables*
+fish/fish_history
+hypr/config/env-gpu.lua
+hypr/config/terminal.lua
+hypr/monitors.lua
+hypr/workspaces.lua
+custom_scripts/saved_sessions.txt
+custom_scripts/tmux_sessions.txt
+custom_scripts/~
+quickshell/.superpowers/
+systemd/user/quickshell.service.d/gpu.conf
+mpv/local.conf
+fish/functions/fisher.fish
+fish/completions/fisher.fish
+fish/functions/tide.fish
+fish/functions/tide/
+fish/functions/_tide_*
+fish/functions/fish_prompt.fish
+fish/functions/fish_mode_prompt.fish
+fish/completions/tide.fish
+fish/conf.d/_tide_init.fish
+systemd/user/quickshell.service.d/idle.conf
+
+# local working docs, never published
+docs/
+
+# tool caches
+.impeccable/
+
+# Fichiers locaux de préparation de cette adaptation
 /.cache/
-/tests/artifacts/
-*.log
-*.qcow2
-*.iso
-*.fd
-.env
-*.pem
-*.key
+/PROMPT.md
