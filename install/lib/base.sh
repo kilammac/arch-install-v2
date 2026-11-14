@@ -58,8 +58,8 @@ baseMirrors() {
 basePackageList() {
   local ucode=() boot=() shells=() power=()
   case "${A_CPU:-none}" in
-    amd) ucode=(amd-ucode) ;;
-    intel) ucode=(intel-ucode) ;;
+  amd) ucode=(amd-ucode) ;;
+  intel) ucode=(intel-ucode) ;;
   esac
   bundleCollect
   gpuPackages
@@ -84,8 +84,8 @@ basePowerPackages() {
 
 _basePowerService() {
   case "$1" in
-    thermald) echo thermald.service ;;
-    intel-lpmd) echo intel_lpmd.service ;;
+  thermald) echo thermald.service ;;
+  intel-lpmd) echo intel_lpmd.service ;;
   esac
 }
 
@@ -126,7 +126,7 @@ EOF
 systemTuning() {
   writeFile "${MNT}/etc/systemd/zram-generator.conf" <<'EOF'
 [zram0]
-zram-size = ram
+zram-size = ram/2
 compression-algorithm = zstd
 swap-priority = 100
 fs-type = swap

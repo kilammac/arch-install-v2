@@ -32,7 +32,6 @@ kitty
 neovim
 tmux
 yazi
-thunar
 tumbler
 gvfs
 gvfs-mtp
@@ -52,6 +51,7 @@ feh
 fastfetch
 brightnessctl
 ddcutil
+inetutils
 acpi
 pacman-contrib
 reflector
