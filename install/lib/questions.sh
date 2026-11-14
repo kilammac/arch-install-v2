@@ -163,7 +163,7 @@ _fineTuneBundle() {
   for entry in "${entries[@]}"; do
     packageExcluded "$entry" || ticked+=("$entry")
   done
-  uiMulti kept "Untick what you do not want from ${name}" "$(IFS=,; echo "${ticked[*]}")" "${entries[@]}"
+  uiMulti kept "Untick what you do not want from ${name} (x/Tab toggles)" "$(IFS=,; echo "${ticked[*]}")" "${entries[@]}"
   read -ra excluded <<<"$A_EXCLUDE"
   for entry in "${entries[@]}"; do
     mapfile -t excluded < <(printf '%s\n' "${excluded[@]}" | grep -vxF "$entry" || true)
@@ -175,20 +175,33 @@ _fineTuneBundle() {
 }
 
 askBundles() {
-  local labels=() selected=() bundles=() chosen name pick
+  local labels=() selected=() bundles=() available=() chosen name pick label
   A_EXCLUDE="${A_EXCLUDE-}"
-  _preseeded A_BUNDLES && return 0
-  A_BUNDLES="${A_BUNDLES:-$(bundleDefaults)}"
+  _preseededAny A_BUNDLES && return 0
+  A_BUNDLES="${A_BUNDLES-$(bundleDefaults)}"
   while read -r name; do
     [[ "$name" == core ]] && continue
+    available+=("$name")
     labels+=("$(_bundleLabel "$name")")
     if bundleSelected "$name"; then
       selected+=("$(_bundleLabel "$name")")
     fi
   done < <(bundleNames)
   uiInfo "Core is always installed: $(bundleMeta core description)."
-  uiMulti chosen "Extra bundles (space toggles, enter confirms)" "$(IFS=,; echo "${selected[*]}")" "${labels[@]}"
-  A_BUNDLES="$(grep -oE '(^| )[a-z0-9-]+:' <<<" ${chosen}" | tr -d ': ' | paste -sd' ' || true)"
+  uiMulti chosen "Extra bundles (x/Tab toggles, enter confirms)" "$(IFS=,; echo "${selected[*]}")" "${labels[@]}"
+  # Gum renvoie les libellés complets ; le mode texte accepte les noms seuls.
+  # Remplacer les libellés connus avant de lire les identifiants, sans analyser
+  # les mots de leurs descriptions comme s'ils étaient des groupes.
+  for name in "${available[@]}"; do
+    label="$(_bundleLabel "$name")"
+    chosen="${chosen//"$label"/"$name"}"
+  done
+  A_BUNDLES=""
+  read -ra bundles <<<"$chosen"
+  for name in "${bundles[@]}"; do
+    [[ " ${available[*]} " == *" $name "* ]] || continue
+    [[ " ${A_BUNDLES} " == *" $name "* ]] || A_BUNDLES+="${A_BUNDLES:+ }$name"
+  done
   read -ra bundles <<<"core ${A_BUNDLES}"
   while uiConfirm "Fine-tune the packages inside a bundle?" no; do
     uiChoose pick "Which bundle?" "${bundles[@]}"
@@ -216,7 +229,7 @@ askShells() {
   local options=()
   shellDefaults
   if ! _preseededAny A_SHELLS; then
-    uiMulti A_SHELLS "Shells (${BASE_SHELL} always installed; space toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
+    uiMulti A_SHELLS "Shells (${BASE_SHELL} always installed; x/Tab toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
   fi
   mapfile -t options < <(_loginShellOptions)
   if ((${#options[@]} == 1)); then
@@ -232,7 +245,7 @@ askShells() {
     fi
   fi
   if ! _preseededAny A_TERMINALS; then
-    uiMulti A_TERMINALS "Terminals besides ${BASE_TERMINAL} (space toggles, enter confirms)" "${A_TERMINALS// /,}" "${EXTRA_TERMINALS[@]}"
+    uiMulti A_TERMINALS "Terminals besides ${BASE_TERMINAL} (x/Tab toggles, enter confirms)" "${A_TERMINALS// /,}" "${EXTRA_TERMINALS[@]}"
   fi
   mapfile -t options < <(_defaultTerminalOptions)
   if ((${#options[@]} == 1)); then

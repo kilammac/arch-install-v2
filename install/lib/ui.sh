@@ -148,11 +148,20 @@ uiChoose() {
 }
 
 uiMulti() {
-  local __var="$1" header="$2" selected="$3" value reply
+  local __var="$1" header="$2" selected="$3" value reply option selected_options=()
   shift 3
   if ((HAS_GUM)); then
-    value="$(printf '%s\n' "$@" | gum choose --no-limit --header "$header" \
-      --height "$UI_LIST_HEIGHT" --selected "$selected")" || return 1
+    # Les libellés peuvent contenir des virgules. Ne pas les transmettre à
+    # --selected, qui découperait chaque libellé en plusieurs valeurs.
+    for option in "$@"; do
+      if [[ ",${selected}," == *",${option},"* ]]; then
+        selected_options+=("$option")
+      fi
+    done
+    # Options en arguments, présélections séparées par des retours à la ligne.
+    value="$(printf '%s\n' "${selected_options[@]}" | env -u GUM_CHOOSE_SELECTED \
+      gum choose --no-limit --header "$header" --height "$UI_LIST_HEIGHT" \
+      --input-delimiter $'\n' --output-delimiter $'\n' -- "$@")" || return 1
   else
     echo "$header"
     printf '  %s\n' "$@"

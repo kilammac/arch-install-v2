@@ -18,6 +18,8 @@ Le parcours est celui de bboysidou : questions, choix du disque et du partitionn
 
 Préférences proposées : utilisateur `kilam`, Bash comme shell de connexion et Oh My Bash activé. Firefox reste sélectionné dans le groupe Navigateurs. L’effacement du disque demande une confirmation Oui/Non, avec Non par défaut.
 
+Dans les menus à cases, utilise les flèches pour te déplacer, **x (sans Maj) ou Tab pour cocher/décocher**, puis Entrée pour valider. La touche Espace ne bascule pas les cases avec Gum 2.0.2. En mode texte sans Gum, saisis les noms des groupes séparés par des espaces, par exemple `browsers docker`.
+
 Si tu conserves Oh My Bash, son assistant officiel crée son `.bashrc` et ouvre Bash. Tape `exit` pour reprendre l’installation. Aucun `.bashrc` personnel n’est copié ; tu peux le reprendre manuellement ensuite.
 
 **Le choix d’effacement du disque détruit ses partitions après confirmation.** Ne lance pas l’installateur pour réparer une installation existante.
@@ -48,8 +50,11 @@ Depuis la racine du clone :
 ```bash
 bash tests/verifier-adaptation.sh
 bash tests/preferences.sh
+bash tests/bundles.sh
 shellcheck -x -P SCRIPTDIR install/install.sh install/link.sh tests/verifier-adaptation.sh
 ```
+
+Avec `gum` et `expect` disponibles, `expect tests/bundles-gum.exp` pilote les vrais menus dans un pseudo-terminal : présélections, X/Tab, sélection vide, réouverture et exclusion d’un paquet. Un fichier de réponses peut aussi fournir `A_BUNDLES=""` pour ne sélectionner aucun groupe facultatif ; core reste installé.
 
 Les journaux et la reprise utilisent les emplacements d’origine : `/tmp/installer` sur l’ISO, puis `/var/log/installer.log` sur le système installé.
 

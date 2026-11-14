@@ -1,3 +1,11 @@
+diff --git a/install/bundles/00-core.list b/install/bundles/00-core.list
+index eae7f45..fcab652 100644
+--- a/install/bundles/00-core.list
++++ b/install/bundles/00-core.list
+@@ -35 +34,0 @@ yazi
+-thunar
+@@ -54,0 +54 @@ ddcutil
++inetutils
 diff --git a/install/install.sh b/install/install.sh
 index 153bf2c..d11f502 100755
 --- a/install/install.sh
@@ -6,17 +14,64 @@ index 153bf2c..d11f502 100755
 +  if [[ "${A_OH_MY_BASH:-yes}" == yes ]]; then
 +    uiStep --verbose "Oh My Bash (type exit after the installer to continue)" userOhMyBash
 +  fi
+diff --git a/install/lib/base.sh b/install/lib/base.sh
+index 245df19..f8dc3e7 100644
+--- a/install/lib/base.sh
++++ b/install/lib/base.sh
+@@ -61,2 +61,2 @@ basePackageList() {
+-    amd) ucode=(amd-ucode) ;;
+-    intel) ucode=(intel-ucode) ;;
++  amd) ucode=(amd-ucode) ;;
++  intel) ucode=(intel-ucode) ;;
+@@ -87,2 +87,2 @@ _basePowerService() {
+-    thermald) echo thermald.service ;;
+-    intel-lpmd) echo intel_lpmd.service ;;
++  thermald) echo thermald.service ;;
++  intel-lpmd) echo intel_lpmd.service ;;
+@@ -129 +129 @@ systemTuning() {
+-zram-size = ram
++zram-size = ram/2
 diff --git a/install/lib/questions.sh b/install/lib/questions.sh
-index 1a3e933..910883c 100644
+index 1a3e933..36440d3 100644
 --- a/install/lib/questions.sh
 +++ b/install/lib/questions.sh
 @@ -4 +4 @@ DEFAULT_HOSTNAME="archlinux"
 -DEFAULT_USERNAME="sidouxp3"
 +DEFAULT_USERNAME="kilam"
-@@ -219 +219 @@ askShells() {
+@@ -166 +166 @@ _fineTuneBundle() {
+-  uiMulti kept "Untick what you do not want from ${name}" "$(IFS=,; echo "${ticked[*]}")" "${entries[@]}"
++  uiMulti kept "Untick what you do not want from ${name} (x/Tab toggles)" "$(IFS=,; echo "${ticked[*]}")" "${entries[@]}"
+@@ -178 +178 @@ askBundles() {
+-  local labels=() selected=() bundles=() chosen name pick
++  local labels=() selected=() bundles=() available=() chosen name pick label
+@@ -180,2 +180,2 @@ askBundles() {
+-  _preseeded A_BUNDLES && return 0
+-  A_BUNDLES="${A_BUNDLES:-$(bundleDefaults)}"
++  _preseededAny A_BUNDLES && return 0
++  A_BUNDLES="${A_BUNDLES-$(bundleDefaults)}"
+@@ -183,0 +184 @@ askBundles() {
++    available+=("$name")
+@@ -190,2 +191,14 @@ askBundles() {
+-  uiMulti chosen "Extra bundles (space toggles, enter confirms)" "$(IFS=,; echo "${selected[*]}")" "${labels[@]}"
+-  A_BUNDLES="$(grep -oE '(^| )[a-z0-9-]+:' <<<" ${chosen}" | tr -d ': ' | paste -sd' ' || true)"
++  uiMulti chosen "Extra bundles (x/Tab toggles, enter confirms)" "$(IFS=,; echo "${selected[*]}")" "${labels[@]}"
++  # Gum renvoie les libellés complets ; le mode texte accepte les noms seuls.
++  # Remplacer les libellés connus avant de lire les identifiants, sans analyser
++  # les mots de leurs descriptions comme s'ils étaient des groupes.
++  for name in "${available[@]}"; do
++    label="$(_bundleLabel "$name")"
++    chosen="${chosen//"$label"/"$name"}"
++  done
++  A_BUNDLES=""
++  read -ra bundles <<<"$chosen"
++  for name in "${bundles[@]}"; do
++    [[ " ${available[*]} " == *" $name "* ]] || continue
++    [[ " ${A_BUNDLES} " == *" $name "* ]] || A_BUNDLES+="${A_BUNDLES:+ }$name"
++  done
+@@ -219 +232 @@ askShells() {
 -    uiMulti A_SHELLS "Shells besides ${BASE_SHELL} (space toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
-+    uiMulti A_SHELLS "Shells (${BASE_SHELL} always installed; space toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
-@@ -226,0 +227,7 @@ askShells() {
++    uiMulti A_SHELLS "Shells (${BASE_SHELL} always installed; x/Tab toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
+@@ -226,0 +240,7 @@ askShells() {
 +  if ! _preseeded A_OH_MY_BASH; then
 +    if uiConfirm "Install Oh My Bash with its official installer?" "$A_OH_MY_BASH"; then
 +      A_OH_MY_BASH=yes
@@ -24,10 +79,13 @@ index 1a3e933..910883c 100644
 +      A_OH_MY_BASH=no
 +    fi
 +  fi
-@@ -266 +273 @@ _summaryRows() {
+@@ -228 +248 @@ askShells() {
+-    uiMulti A_TERMINALS "Terminals besides ${BASE_TERMINAL} (space toggles, enter confirms)" "${A_TERMINALS// /,}" "${EXTRA_TERMINALS[@]}"
++    uiMulti A_TERMINALS "Terminals besides ${BASE_TERMINAL} (x/Tab toggles, enter confirms)" "${A_TERMINALS// /,}" "${EXTRA_TERMINALS[@]}"
+@@ -266 +286 @@ _summaryRows() {
 -    "Shells=${BASE_SHELL} ${A_SHELLS} · login ${A_LOGIN_SHELL}" "Terminals=${BASE_TERMINAL} ${A_TERMINALS} · keybind ${A_DEFAULT_TERMINAL}"
 +    "Shells=${BASE_SHELL} ${A_SHELLS#"$BASE_SHELL"} · login ${A_LOGIN_SHELL}" "Oh My Bash=${A_OH_MY_BASH:-yes}" "Terminals=${BASE_TERMINAL} ${A_TERMINALS} · keybind ${A_DEFAULT_TERMINAL}"
-@@ -300 +307 @@ _confirmDestructive() {
+@@ -300 +320 @@ _confirmDestructive() {
 -    uiTypedConfirm "$A_DISK" "Type ${A_DISK} to confirm"
 +    uiConfirm "Effacer entièrement ${A_DISK} ?" no
 diff --git a/install/lib/shells.sh b/install/lib/shells.sh
@@ -56,6 +114,27 @@ index b23420a..1cab93d 100644
 +++ b/install/lib/state.sh
 @@ -21,0 +22 @@ ANSWER_VARS=(
 +  A_OH_MY_BASH
+diff --git a/install/lib/ui.sh b/install/lib/ui.sh
+index 1a498f9..6496495 100644
+--- a/install/lib/ui.sh
++++ b/install/lib/ui.sh
+@@ -151 +151 @@ uiMulti() {
+-  local __var="$1" header="$2" selected="$3" value reply
++  local __var="$1" header="$2" selected="$3" value reply option selected_options=()
+@@ -154,2 +154,11 @@ uiMulti() {
+-    value="$(printf '%s\n' "$@" | gum choose --no-limit --header "$header" \
+-      --height "$UI_LIST_HEIGHT" --selected "$selected")" || return 1
++    # Les libellés peuvent contenir des virgules. Ne pas les transmettre à
++    # --selected, qui découperait chaque libellé en plusieurs valeurs.
++    for option in "$@"; do
++      if [[ ",${selected}," == *",${option},"* ]]; then
++        selected_options+=("$option")
++      fi
++    done
++    # Options en arguments, présélections séparées par des retours à la ligne.
++    value="$(printf '%s\n' "${selected_options[@]}" | env -u GUM_CHOOSE_SELECTED \
++      gum choose --no-limit --header "$header" --height "$UI_LIST_HEIGHT" \
++      --input-delimiter $'\n' --output-delimiter $'\n' -- "$@")" || return 1
 diff --git a/install/lib/user.sh b/install/lib/user.sh
 index 713d361..941e01f 100644
 --- a/install/lib/user.sh

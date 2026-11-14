@@ -15,7 +15,7 @@ Cette version remplace l’architecture personnalisée précédemment utilisée 
 | `bundles/00-core.list` | Ajout de `qt6-multimedia`, requis par le lecteur cassette de la configuration Quickshell personnelle. |
 | `README.md` | Adresse de téléchargement de ce dépôt. |
 
-Les préférences complémentaires validées ci-dessous modifient aussi les questions, les shells et les réponses enregistrées. `lib/ui.sh`, `lib/disk.sh`, `lib/gpu.sh`, `lib/base.sh`, les autres listes de paquets et `link.sh` restent identiques octet par octet à la source.
+Les préférences complémentaires et les corrections de sélection ci-dessous modifient aussi les questions, les shells et les réponses enregistrées. Dans `lib/ui.sh`, seul le helper de sélection multiple est adapté ; la progression est conservée. Les adaptations déjà commitées dans la base et les listes core sont également conservées dans le delta explicite.
 
 Le manifeste `tests/bboysidou-install.sha256` provient des fichiers originaux téléchargés. `tests/verifier-adaptation.sh` vérifie leur identité après normalisation des seules différences autorisées ci-dessus. Il vérifie aussi l’affichage de la barre de progression d’origine.
 
@@ -73,3 +73,17 @@ Résultats :
 - Le rendu de cette VM est logiciel ; les avertissements sur le GPU accéléré, les fréquences CPU ou l’absence de périphériques ne constituent pas des essais de matériel physique.
 
 La comparaison complète avec la source et les essais de téléchargement doivent continuer à passer après chaque adaptation des adresses du dépôt.
+
+## Correction de la sélection des groupes
+
+Trois défauts ont été reproduits sans installation de système :
+
+- Les libellés de groupes contiennent des virgules. Le paramètre `gum choose --selected` les découpait et perdait les présélections, notamment celle de Navigateurs. Les options sont maintenant passées en arguments et les libellés présélectionnés sur stdin, séparés par des retours à la ligne.
+- La touche Espace ne bascule pas les cases dans Gum 2.0.2, alors que les menus l'indiquaient. Les menus indiquent désormais X ou Tab, qui fonctionnent dans cette version. Le défaut est aussi signalé dans [Gum #1143](https://github.com/charmbracelet/gum/issues/1143).
+- En mode texte, les noms seuls tels que `browsers` étaient perdus par une conversion qui attendait un deux-points. La conversion accepte maintenant les noms et les libellés complets, ne conserve que les groupes disponibles et retire les doublons.
+
+Une sélection explicitement vide reste vide quand on rouvre le menu ; un `A_BUNDLES=""` fourni dans `--answers` est également respecté. Le groupe core reste obligatoire.
+
+Vérifications exécutées : `tests/bundles.sh`, puis six scénarios réels dans un pseudo-terminal avec le binaire officiel Arch Gum 2.0.2 et Expect (`tests/bundles-gum.exp`). Les scénarios couvrent la validation de Navigateurs sans changement, plusieurs présélections, la sélection par X, la désélection par Tab suivie d'une réouverture, les groupes `default=on` et l'exclusion effective de Firefox. Les tests de préférences, ShellCheck et la comparaison des adaptations sont aussi exécutés. Aucun paquet ni système n'est installé par ces tests.
+
+Le patch de comparaison inclut les changements du projet déjà commités avant cette correction (listes core et réglage Zram), sans réécrire leurs fichiers pour cette tâche.

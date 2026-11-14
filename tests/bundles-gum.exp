@@ -1,0 +1,67 @@
+#!/usr/bin/env expect
+# Lancer depuis la racine du projet avec gum et expect disponibles.
+set timeout 15
+log_user 0
+set env(TERM) xterm-256color
+proc waitfor {pattern} {
+  expect {
+    -re $pattern {return $expect_out(0,string)}
+    timeout {puts stderr "ÉCHEC : attente de $pattern"; exit 1}
+    eof {puts stderr "ÉCHEC : fin inattendue, attente de $pattern"; exit 1}
+  }
+}
+proc startmenu {initial {rounds 1}} {
+  global spawn_id
+  spawn bash -c {stty columns 160 rows 45; exec bash tests/bundles.sh --menu "$@"} _ $initial $rounds
+  waitfor {Extra bundles}
+  after 150
+}
+proc submit {keys expected firefox {round 1}} {
+  if {$keys ne ""} {send -- $keys; after 100}
+  send -- "\r"
+  waitfor {Fine-tune}
+  send -- "n"
+  waitfor "RESULT${round}=\\\[$expected\\\];FIREFOX=\\\[$firefox\\\]"
+}
+proc finish {} {
+  expect eof
+  set status [wait]
+  if {[lindex $status 3] != 0} {puts stderr "ÉCHEC : statut du menu"; exit 1}
+}
+startmenu browsers
+submit "" browsers yes
+finish
+puts "OK Gum : browsers reste coché avec une description contenant des virgules."
+startmenu "docker browsers"
+submit "" {docker browsers} yes
+finish
+puts "OK Gum : plusieurs groupes présélectionnés sont collectés."
+startmenu ""
+submit "\033\[B\033\[B\033\[Bx" browsers yes
+finish
+puts "OK Gum : X sélectionne browsers et installe Firefox."
+startmenu browsers 2
+submit "\033\[B\033\[B\033\[B\t" "" no
+waitfor {Extra bundles}
+submit "" "" no 2
+finish
+puts "OK Gum : désélection puis réouverture restent vides."
+startmenu __defaults__
+submit "" {dev docker browsers office media ocr peripherals security} yes
+finish
+puts "OK Gum : les groupes default=on sont cochés, android reste décoché."
+# Réglage fin : décocher Firefox doit alimenter A_EXCLUDE.
+startmenu browsers
+send -- "\r"
+waitfor {Fine-tune}
+send -- "y"
+waitfor {Which bundle}
+send -- "\033\[B\r"
+waitfor {Untick what you do not want}
+after 100
+send -- "\t\r"
+waitfor {Fine-tune}
+send -- "n"
+waitfor {RESULT1=\[browsers\];FIREFOX=\[no\]}
+finish
+puts "OK Gum : décocher Firefox l'exclut réellement de la collecte."
