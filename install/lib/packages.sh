@@ -14,11 +14,27 @@ collect_packages() {
     case "$extra" in snapd|snapper|timeshift) die "Paquet exclu : $extra";; esac
   done
 }
-preflight_packages() {
+preflight_packages() (
+  # Le sous-shell garde son nettoyage indépendant des traps de l'installateur.
+  local config=${1:-/etc/pacman.conf} source_db probe database
   info 'Vérification de la disponibilité des paquets avant formatage…'
-  # -Sp résout la transaction, y compris les noms virtuels et leurs fournisseurs,
-  # sans télécharger, installer ni rafraîchir les bases. Conserver les erreurs
-  # de Pacman pour identifier aussi une dépendance manquante ou un conflit.
-  pacman -Sp --noconfirm --print-format '%n' -- "${PACKAGES[@]}" >/dev/null ||
-    die 'Impossible de résoudre les paquets. Corrige les erreurs Pacman avant de continuer.'
-}
+  source_db=$(pacman-conf --config "$config" DBPath) || die 'Impossible de trouver les bases Pacman.'
+  [[ -d $source_db/sync ]] || die 'Bases des dépôts absentes ; synchronise les dépôts depuis l’ISO.'
+  probe=$(mktemp -d /tmp/arch-insall-preflight.XXXXXXXX) || exit 1
+  trap 'rm -rf -- "$probe"' EXIT
+  mkdir -p "$probe/root" "$probe/db/local" "$probe/db/sync"
+  # Copier seulement les bases de dépôts. Ne jamais utiliser les paquets
+  # installés sur l'ISO : leurs dépendances peuvent être plus anciennes.
+  for database in "$source_db"/sync/*.db "$source_db"/sync/*.db.sig; do
+    [[ -f $database ]] || continue
+    cp -L -- "$database" "$probe/db/sync/" || exit 1
+  done
+  # -Sp ne télécharge ni n'installe rien. Les diagnostics détaillés de Pacman
+  # peuvent être écrits sur stdout : conserver les deux flux en cas d'échec.
+  if ! pacman --config "$config" --root "$probe/root" --dbpath "$probe/db" \
+    --logfile "$probe/pacman.log" -Sp --noconfirm --print-format '%n' \
+    -- "${PACKAGES[@]}" >"$probe/resolution.log" 2>&1; then
+    cat "$probe/resolution.log" >&2
+    die 'Impossible de résoudre les paquets pour le nouveau système. Aucun disque formaté.'
+  fi
+)

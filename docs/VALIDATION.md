@@ -42,3 +42,18 @@ Le déploiement des configurations a aussi été rejoué dans la VM avec `umask 
 Le signalement `Indisponible : libva-mesa-driver` venait de l’utilisation de `pacman -Si` sur un nom virtuel fourni par `mesa`. Les branches AMD et nouveau demandent désormais directement `mesa`. Le contrôle avant formatage utilise `pacman -Sp` pour résoudre la transaction et les fournisseurs, sans installation ni téléchargement.
 
 Vérifications exécutées après correction : suite Bash, ShellCheck, contrôle des différences et résolutions Pacman réelles pour les profils AMD et NVIDIA nouveau. Une transaction demandant explicitement `mesa` et son nom virtuel `libva-mesa-driver` a également été résolue avec succès. Les tests vérifient qu’un échec de résolution bloque la suite. Aucune réinstallation complète en VM n’a été nécessaire pour ce changement de sélection et de vérification des paquets.
+
+## Isolation du contrôle avant formatage
+
+Un second blocage a été reproduit avec les enregistrements de paquets extraits de l’ISO Arch du 1er novembre 2026 et les bases de dépôts officielles actuelles : la résolution sur l’ISO tentait de mettre à jour OpenSSL et cassait les dépendances d’outils du système live. Les détails étaient masqués parce que Pacman les écrivait sur stdout.
+
+Le contrôle utilise désormais une racine et une base locale vides dans un répertoire temporaire, avec une copie des seules bases des dépôts. Il vérifie ainsi un nouveau système, indépendamment des logiciels installés sur l’ISO. Le sous-shell nettoie ses fichiers temporaires à la sortie. En cas d’échec, stdout et stderr de Pacman sont affichés avant l’arrêt, toujours avant formatage.
+
+Vérifications exécutées :
+
+- `bash tests/run.sh` et ShellCheck sur les points d’entrée, modules, tests et outils.
+- `bash tests/preflight-pacman.sh` : dépôt synthétique local, sans téléchargement ni installation ; conflit avec un outil de l’ISO reproduit, résolution isolée réussie, base source inchangée et vraie dépendance absente toujours bloquante avec diagnostic visible.
+- Résolution complète des profils Intel, AMD, NVIDIA ouvert et nouveau, avec deux noyaux, contre les bases officielles core/extra et une base locale extraite de l’ISO. Les quatre profils passent avec l’isolation ; le profil AMD reproduit le conflit OpenSSL avec l’ancienne méthode.
+- Audit des fichiers et contrôle des différences.
+
+Aucune nouvelle installation ni aucun formatage n’ont été exécutés pour cette correction.

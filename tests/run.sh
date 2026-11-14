@@ -72,19 +72,34 @@ check test "$(partition_path /dev/sda 1)" = /dev/sda1
 check test "$(partition_path /dev/nvme0n1 2)" = /dev/nvme0n1p2
 check test "$(partition_path /dev/mmcblk0 1)" = /dev/mmcblk0p1
 # Vérifier le contrat du contrôle avant formatage et son arrêt sur échec.
+mkdir -p "$fixture/live-db/sync" "$fixture/live-db/local"
+touch "$fixture/live-db/sync/repo.db" "$fixture/live-db/local/outil-iso"
 (
+  pacman-conf() { printf '%s\n' "$fixture/live-db"; }
   pacman() {
-    [[ $* == "-Sp --noconfirm --print-format %n -- mesa libva-mesa-driver" ]]
+    local dbpath='' args=" $* "
+    while (($#)); do
+      if [[ $1 == --dbpath ]]; then dbpath=$2; break; fi
+      shift
+    done
+    [[ $args == *' -Sp --noconfirm --print-format %n -- mesa libva-mesa-driver '* ]] || return 1
+    [[ $dbpath != "$fixture/live-db" && -d $dbpath/local && -f $dbpath/sync/repo.db ]] || return 1
+    [[ -z $(ls -A "$dbpath/local") ]] || return 1
+    printf '%s\n' "${dbpath%/db}" > "$fixture/last-probe"
   }
   PACKAGES=(mesa libva-mesa-driver)
   preflight_packages
 ) || fail 'La vérification doit résoudre les fournisseurs sans installation'
+check test ! -d "$(cat "$fixture/last-probe")"
+check test -f "$fixture/live-db/local/outil-iso"
 if (
-  pacman() { return 1; }
+  pacman-conf() { printf '%s\n' "$fixture/live-db"; }
+  pacman() { printf 'DEPENDANCE-MANQUANTE-DETAILLEE\n'; return 1; }
   preflight_packages
-) >/dev/null 2>&1; then
+) > "$fixture/resolution-failure.log" 2>&1; then
   fail 'Une résolution impossible doit bloquer avant formatage'
 fi
+grep -q DEPENDANCE-MANQUANTE-DETAILLEE "$fixture/resolution-failure.log" || fail 'Diagnostic stdout de Pacman perdu'
 # Les commandes mutantes seraient fatales si le mode simulation les exécutait.
 mkdir "$fixture/bin"
 for command in sgdisk wipefs partprobe udevadm mkfs.fat mkfs.btrfs mkdir mount umount btrfs pacstrap arch-chroot cp chmod chown install sync sudo pacman; do
