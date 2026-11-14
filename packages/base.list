@@ -1,0 +1,17 @@
+base
+linux-firmware
+sof-firmware
+btrfs-progs
+sudo
+networkmanager
+zram-generator
+git
+curl
+rsync
+gum
+pciutils
+usbutils
+jq
+man-db
+less
+man-pages

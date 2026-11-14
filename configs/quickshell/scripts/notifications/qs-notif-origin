@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Aucun profil de navigateur consulté dans cette distribution minimale.
+exit 0

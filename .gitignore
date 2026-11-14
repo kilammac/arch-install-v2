@@ -1,0 +1,11 @@
+# Le prompt de travail contient des chemins locaux et reste privé.
+/PROMPT.md
+/.cache/
+/tests/artifacts/
+*.log
+*.qcow2
+*.iso
+*.fd
+.env
+*.pem
+*.key

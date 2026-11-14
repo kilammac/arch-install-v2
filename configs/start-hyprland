@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export XDG_CURRENT_DESKTOP=Hyprland
+export XDG_SESSION_TYPE=wayland
+# Arrêter le shell lorsque le compositeur termine la session en console.
+trap 'systemctl --user stop quickshell.service 2>/dev/null || true' EXIT
+Hyprland "$@"
