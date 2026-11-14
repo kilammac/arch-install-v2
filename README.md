@@ -16,6 +16,10 @@ bash install.sh
 
 Le parcours est celui de bboysidou : questions, choix du disque et du partitionnement, sélection des paquets, configuration du système, pilotes, installation des dotfiles et proposition de redémarrage. Les paquets supplémentaires se choisissent dans ses menus d’origine, avec possibilité d’affiner les paquets d’un groupe.
 
+Préférences proposées : utilisateur `kilam`, Bash comme shell de connexion et Oh My Bash activé. Firefox reste sélectionné dans le groupe Navigateurs. L’effacement du disque demande une confirmation Oui/Non, avec Non par défaut.
+
+Si tu conserves Oh My Bash, son assistant officiel crée son `.bashrc` et ouvre Bash. Tape `exit` pour reprendre l’installation. Aucun `.bashrc` personnel n’est copié ; tu peux le reprendre manuellement ensuite.
+
 **Le choix d’effacement du disque détruit ses partitions après confirmation.** Ne lance pas l’installateur pour réparer une installation existante.
 
 Les options d’origine sont conservées :
@@ -43,6 +47,7 @@ Depuis la racine du clone :
 
 ```bash
 bash tests/verifier-adaptation.sh
+bash tests/preferences.sh
 shellcheck -x -P SCRIPTDIR install/install.sh install/link.sh tests/verifier-adaptation.sh
 ```
 

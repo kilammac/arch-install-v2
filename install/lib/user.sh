@@ -6,6 +6,7 @@ DOTFILES_BRANCH="${DOTFILES_BRANCH:-main}"
 YAY_URL="https://aur.archlinux.org/yay-bin.git"
 TPM_URL="https://github.com/tmux-plugins/tpm"
 FISHER_URL="https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish"
+OH_MY_BASH_URL="https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh"
 GRAPHITE_URL="https://github.com/vinceliuice/Graphite-gtk-theme.git"
 GRAPHITE_ARGS="-d ~/.themes -t teal -c dark -s standard -l --tweaks black rimless normal"
 DEFAULT_WALLPAPER="Pictures/wallpaper/prefere-arch1.jpg"
@@ -108,6 +109,24 @@ userFish() {
   asUser bash -c 'mkdir -p "$HOME/.local/bin" && { [[ -e "$HOME/.local/bin/env.fish" ]] || printf "%s\n" "$1" >"$HOME/.local/bin/env.fish"; }' _ "$UV_ENV_FISH"
   asUser fish -c "curl -sL ${FISHER_URL} | source && fisher update"
   asUser fish -c "functions -q tide"
+}
+
+userOhMyBash() {
+  if ((!DRY_RUN)) && [[ -f "${MNT}/home/${A_USER}/.oh-my-bash/oh-my-bash.sh" ]]; then
+    echo "Oh My Bash already installed"
+    return 0
+  fi
+  if ((DRY_RUN)); then
+    asUser env -u OSH -u OSH_REPOSITORY bash -c 'installer=$(curl -fsSL "$1") || exit; bash -c "$installer"' _ "$OH_MY_BASH_URL"
+    return
+  fi
+  if ! { : </dev/tty; } 2>/dev/null; then
+    echo "Oh My Bash needs an interactive terminal. Run the installer from the ISO terminal." >&2
+    return 1
+  fi
+  # L'étape verbose garde la progression d'origine ; /dev/tty restitue
+  # l'entrée interactive que les tâches en arrière-plan redirigent normalement.
+  asUser env -u OSH -u OSH_REPOSITORY bash -c 'installer=$(curl -fsSL "$1") || exit; bash -c "$installer"' _ "$OH_MY_BASH_URL" </dev/tty
 }
 
 userWallpaper() {

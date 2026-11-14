@@ -2,11 +2,18 @@
 # Contrat : conserver l'installateur bboysidou, y compris son interface.
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
+comparison=$(mktemp -d)
+trap 'rm -rf -- "$comparison"' EXIT
+cp -a install "$comparison/install"
+# Retirer uniquement le delta des préférences validées avant la comparaison amont.
+patch --silent --reverse --strip=1 --directory="$comparison" < tests/preferences-installateur.patch
 expected_count=$(wc -l < tests/bboysidou-install.sha256)
 actual_count=$(find install -type f | wc -l)
 [[ $actual_count == "$expected_count" ]] || { echo 'Fichiers ajoutés ou retirés dans install/ : comparaison requise.' >&2; exit 1; }
 while read -r expected path; do
-  case "$path" in
+  relative=$path
+  path="$comparison/$relative"
+  case "$relative" in
     install/install.sh)
       actual=$(sed \
         -e 's|REPO_SLUG="kilammac/arch-install-v2"|REPO_SLUG="bboysidou/dotfile_hyperland"|' \

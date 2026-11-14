@@ -2,10 +2,10 @@
 
 BASE_SHELL="bash"
 BASE_TERMINAL="kitty"
-EXTRA_SHELLS=(zsh fish)
+EXTRA_SHELLS=(bash zsh fish)
 EXTRA_TERMINALS=(alacritty ghostty foot)
-DEFAULT_SHELLS="fish"
-DEFAULT_LOGIN_SHELL="fish"
+DEFAULT_SHELLS="bash"
+DEFAULT_LOGIN_SHELL="bash"
 SHELL_BIN_DIR="/usr/bin"
 HYPR_TERMINAL_LUA="hypr/config/terminal.lua"
 
@@ -14,6 +14,7 @@ shellDefaults() {
   A_TERMINALS="${A_TERMINALS-}"
   A_LOGIN_SHELL="${A_LOGIN_SHELL:-$DEFAULT_LOGIN_SHELL}"
   A_DEFAULT_TERMINAL="${A_DEFAULT_TERMINAL:-$BASE_TERMINAL}"
+  A_OH_MY_BASH="${A_OH_MY_BASH:-yes}"
 }
 
 terminalSelected() {
@@ -41,5 +42,8 @@ shellPackages() {
 }
 
 shellUserStepCount() {
-  if shellSelected fish; then echo 1; else echo 0; fi
+  local count=0
+  if shellSelected fish; then count=$((count + 1)); fi
+  if [[ "${A_OH_MY_BASH:-yes}" == yes ]]; then count=$((count + 1)); fi
+  echo "$count"
 }

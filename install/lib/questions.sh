@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 DEFAULT_HOSTNAME="archlinux"
-DEFAULT_USERNAME="sidouxp3"
+DEFAULT_USERNAME="kilam"
 DEFAULT_TZ="Africa/Algiers"
 DEFAULT_LOCALE="en_US.UTF-8"
 DEFAULT_KEYMAP="us"
@@ -216,13 +216,20 @@ askShells() {
   local options=()
   shellDefaults
   if ! _preseededAny A_SHELLS; then
-    uiMulti A_SHELLS "Shells besides ${BASE_SHELL} (space toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
+    uiMulti A_SHELLS "Shells (${BASE_SHELL} always installed; space toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
   fi
   mapfile -t options < <(_loginShellOptions)
   if ((${#options[@]} == 1)); then
     A_LOGIN_SHELL="${options[0]}"
   elif ! _preseeded A_LOGIN_SHELL || [[ "${options[0]}" != "$A_LOGIN_SHELL" ]]; then
     uiChoose A_LOGIN_SHELL "Login shell" "${options[@]}"
+  fi
+  if ! _preseeded A_OH_MY_BASH; then
+    if uiConfirm "Install Oh My Bash with its official installer?" "$A_OH_MY_BASH"; then
+      A_OH_MY_BASH=yes
+    else
+      A_OH_MY_BASH=no
+    fi
   fi
   if ! _preseededAny A_TERMINALS; then
     uiMulti A_TERMINALS "Terminals besides ${BASE_TERMINAL} (space toggles, enter confirms)" "${A_TERMINALS// /,}" "${EXTRA_TERMINALS[@]}"
@@ -263,7 +270,7 @@ _summaryRows() {
     "Bootloader=${A_BOOT}$([[ "$A_LIMINE_SCAN" == yes ]] && echo " + limine-scan")$([[ "$A_SNAPPER" == yes ]] && echo " + snapper")" "CPU=${A_CPU}" "GPU=$(gpuDescribe)" "Virtual=${D_VIRT}" \
     "Bundles=core ${A_BUNDLES}" "Excluded=${A_EXCLUDE:-none}" \
     "System=docker ${A_DOCKER_MODE} · idle ${A_IDLE} · hibernate ${A_HIBERNATE} · logitech ${A_LOGITECH}" \
-    "Shells=${BASE_SHELL} ${A_SHELLS} · login ${A_LOGIN_SHELL}" "Terminals=${BASE_TERMINAL} ${A_TERMINALS} · keybind ${A_DEFAULT_TERMINAL}"
+    "Shells=${BASE_SHELL} ${A_SHELLS#"$BASE_SHELL"} · login ${A_LOGIN_SHELL}" "Oh My Bash=${A_OH_MY_BASH:-yes}" "Terminals=${BASE_TERMINAL} ${A_TERMINALS} · keybind ${A_DEFAULT_TERMINAL}"
 }
 
 _changeMenu() {
@@ -297,7 +304,7 @@ _confirmDestructive() {
   if [[ "$A_MODE" == wipe ]]; then
     if [[ -n "$tags" ]]; then uiError "${A_DISK} holds ${tags}. All of it will be erased."; fi
     uiWarn "Every partition on ${A_DISK} will be destroyed."
-    uiTypedConfirm "$A_DISK" "Type ${A_DISK} to confirm"
+    uiConfirm "Effacer entièrement ${A_DISK} ?" no
     return
   fi
   uiInfo "Current layout of ${A_DISK}:"

@@ -15,9 +15,20 @@ Cette version remplace l’architecture personnalisée précédemment utilisée 
 | `bundles/00-core.list` | Ajout de `qt6-multimedia`, requis par le lecteur cassette de la configuration Quickshell personnelle. |
 | `README.md` | Adresse de téléchargement de ce dépôt. |
 
-Tous les autres fichiers de `install/` sont identiques octet par octet à la source, notamment `lib/ui.sh`, `lib/state.sh`, `lib/questions.sh`, `lib/disk.sh`, `lib/gpu.sh`, `lib/base.sh`, les autres listes de paquets et `link.sh`.
+Les préférences complémentaires validées ci-dessous modifient aussi les questions, les shells et les réponses enregistrées. `lib/ui.sh`, `lib/disk.sh`, `lib/gpu.sh`, `lib/base.sh`, les autres listes de paquets et `link.sh` restent identiques octet par octet à la source.
 
 Le manifeste `tests/bboysidou-install.sha256` provient des fichiers originaux téléchargés. `tests/verifier-adaptation.sh` vérifie leur identité après normalisation des seules différences autorisées ci-dessus. Il vérifie aussi l’affichage de la barre de progression d’origine.
+
+### Préférences complémentaires validées
+
+- `lib/questions.sh` propose `kilam`, affiche Bash parmi les shells, propose Oh My Bash par défaut et remplace la saisie du chemin du disque par Oui/Non avec Non par défaut.
+- `lib/shells.sh` choisit Bash par défaut et compte l’étape Oh My Bash dans la progression ; `lib/state.sh` mémorise `A_OH_MY_BASH` pour la reprise.
+- `install.sh` ajoute cette étape ; `lib/user.sh` lance l’assistant officiel Oh My Bash avec le compte utilisateur et son terminal interactif. L’assistant garde sa création et sa sauvegarde habituelles du `.bashrc`. Aucun fichier `.bashrc` personnel n’est copié.
+- Firefox était déjà inclus et sélectionné par défaut dans le groupe Navigateurs : aucune modification de cette liste.
+
+Le delta explicite `tests/preferences-installateur.patch`, relatif à la version `5217b97`, est retiré dans une copie temporaire avant la comparaison à bboysidou. Les empreintes d’origine ne sont pas recalculées pour masquer les adaptations.
+
+Vérifications de cette mise à jour : `tests/preferences.sh`, comparaison amont, ShellCheck et simulation complète avec progression terminée. L’assistant officiel a aussi été réellement exécuté dans un HOME temporaire via l’étape verbose d’origine ; son Bash interactif puis `exit` ont rendu la main à la progression. Ce test ciblé n’est pas une nouvelle installation complète en VM.
 
 ## Configurations personnelles
 

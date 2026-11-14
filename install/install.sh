@@ -257,6 +257,9 @@ stageUser() {
   if shellSelected fish; then
     uiStep "Fish plugins and your tide prompt" userFish
   fi
+  if [[ "${A_OH_MY_BASH:-yes}" == yes ]]; then
+    uiStep --verbose "Oh My Bash (type exit after the installer to continue)" userOhMyBash
+  fi
   uiStep --optional "Default wallpaper" userWallpaper
   uiStep --optional "tmux plugin manager" userTmux
   uiStep --optional "Graphite GTK theme" userTheme

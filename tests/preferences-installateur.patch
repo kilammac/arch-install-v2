@@ -1,0 +1,83 @@
+diff --git a/install/install.sh b/install/install.sh
+index 153bf2c..d11f502 100755
+--- a/install/install.sh
++++ b/install/install.sh
+@@ -259,0 +260,3 @@ stageUser() {
++  if [[ "${A_OH_MY_BASH:-yes}" == yes ]]; then
++    uiStep --verbose "Oh My Bash (type exit after the installer to continue)" userOhMyBash
++  fi
+diff --git a/install/lib/questions.sh b/install/lib/questions.sh
+index 1a3e933..910883c 100644
+--- a/install/lib/questions.sh
++++ b/install/lib/questions.sh
+@@ -4 +4 @@ DEFAULT_HOSTNAME="archlinux"
+-DEFAULT_USERNAME="sidouxp3"
++DEFAULT_USERNAME="kilam"
+@@ -219 +219 @@ askShells() {
+-    uiMulti A_SHELLS "Shells besides ${BASE_SHELL} (space toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
++    uiMulti A_SHELLS "Shells (${BASE_SHELL} always installed; space toggles, enter confirms)" "${A_SHELLS// /,}" "${EXTRA_SHELLS[@]}"
+@@ -226,0 +227,7 @@ askShells() {
++  if ! _preseeded A_OH_MY_BASH; then
++    if uiConfirm "Install Oh My Bash with its official installer?" "$A_OH_MY_BASH"; then
++      A_OH_MY_BASH=yes
++    else
++      A_OH_MY_BASH=no
++    fi
++  fi
+@@ -266 +273 @@ _summaryRows() {
+-    "Shells=${BASE_SHELL} ${A_SHELLS} · login ${A_LOGIN_SHELL}" "Terminals=${BASE_TERMINAL} ${A_TERMINALS} · keybind ${A_DEFAULT_TERMINAL}"
++    "Shells=${BASE_SHELL} ${A_SHELLS#"$BASE_SHELL"} · login ${A_LOGIN_SHELL}" "Oh My Bash=${A_OH_MY_BASH:-yes}" "Terminals=${BASE_TERMINAL} ${A_TERMINALS} · keybind ${A_DEFAULT_TERMINAL}"
+@@ -300 +307 @@ _confirmDestructive() {
+-    uiTypedConfirm "$A_DISK" "Type ${A_DISK} to confirm"
++    uiConfirm "Effacer entièrement ${A_DISK} ?" no
+diff --git a/install/lib/shells.sh b/install/lib/shells.sh
+index c51d2ac..00aa6b5 100644
+--- a/install/lib/shells.sh
++++ b/install/lib/shells.sh
+@@ -5 +5 @@ BASE_TERMINAL="kitty"
+-EXTRA_SHELLS=(zsh fish)
++EXTRA_SHELLS=(bash zsh fish)
+@@ -7,2 +7,2 @@ EXTRA_TERMINALS=(alacritty ghostty foot)
+-DEFAULT_SHELLS="fish"
+-DEFAULT_LOGIN_SHELL="fish"
++DEFAULT_SHELLS="bash"
++DEFAULT_LOGIN_SHELL="bash"
+@@ -16,0 +17 @@ shellDefaults() {
++  A_OH_MY_BASH="${A_OH_MY_BASH:-yes}"
+@@ -44 +45,4 @@ shellUserStepCount() {
+-  if shellSelected fish; then echo 1; else echo 0; fi
++  local count=0
++  if shellSelected fish; then count=$((count + 1)); fi
++  if [[ "${A_OH_MY_BASH:-yes}" == yes ]]; then count=$((count + 1)); fi
++  echo "$count"
+diff --git a/install/lib/state.sh b/install/lib/state.sh
+index b23420a..1cab93d 100644
+--- a/install/lib/state.sh
++++ b/install/lib/state.sh
+@@ -21,0 +22 @@ ANSWER_VARS=(
++  A_OH_MY_BASH
+diff --git a/install/lib/user.sh b/install/lib/user.sh
+index 713d361..941e01f 100644
+--- a/install/lib/user.sh
++++ b/install/lib/user.sh
+@@ -8,0 +9 @@ FISHER_URL="https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions
++OH_MY_BASH_URL="https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh"
+@@ -112,0 +114,18 @@ userFish() {
++userOhMyBash() {
++  if ((!DRY_RUN)) && [[ -f "${MNT}/home/${A_USER}/.oh-my-bash/oh-my-bash.sh" ]]; then
++    echo "Oh My Bash already installed"
++    return 0
++  fi
++  if ((DRY_RUN)); then
++    asUser env -u OSH -u OSH_REPOSITORY bash -c 'installer=$(curl -fsSL "$1") || exit; bash -c "$installer"' _ "$OH_MY_BASH_URL"
++    return
++  fi
++  if ! { : </dev/tty; } 2>/dev/null; then
++    echo "Oh My Bash needs an interactive terminal. Run the installer from the ISO terminal." >&2
++    return 1
++  fi
++  # L'étape verbose garde la progression d'origine ; /dev/tty restitue
++  # l'entrée interactive que les tâches en arrière-plan redirigent normalement.
++  asUser env -u OSH -u OSH_REPOSITORY bash -c 'installer=$(curl -fsSL "$1") || exit; bash -c "$installer"' _ "$OH_MY_BASH_URL" </dev/tty
++}
++
