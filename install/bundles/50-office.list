@@ -1,6 +1,6 @@
 #: title=Office
 #: description=OnlyOffice, Evince, Bruno
-#: default=on
+#: default=off
 evince
 aur:onlyoffice-bin
 aur:bruno-bin

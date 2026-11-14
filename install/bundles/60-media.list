@@ -1,6 +1,6 @@
 #: title=Media
 #: description=OBS, Kdenlive, VLC, mpv, Discord, Transmission
-#: default=on
+#: default=off
 obs-studio
 vlc
 mpv

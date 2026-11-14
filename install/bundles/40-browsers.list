@@ -3,5 +3,3 @@
 #: default=on
 firefox
 chromium
-aur:brave-bin
-aur:zen-browser-bin
