@@ -15,10 +15,10 @@ collect_packages() {
   done
 }
 preflight_packages() {
-  local package failed=0
   info 'Vérification de la disponibilité des paquets avant formatage…'
-  for package in "${PACKAGES[@]}"; do
-    pacman -Si -- "$package" >/dev/null 2>&1 || { printf 'Indisponible : %s\n' "$package" >&2; failed=1; }
-  done
-  ((failed == 0)) || die 'Corrige les paquets indisponibles avant de continuer.'
+  # -Sp résout la transaction, y compris les noms virtuels et leurs fournisseurs,
+  # sans télécharger, installer ni rafraîchir les bases. Conserver les erreurs
+  # de Pacman pour identifier aussi une dépendance manquante ou un conflit.
+  pacman -Sp --noconfirm --print-format '%n' -- "${PACKAGES[@]}" >/dev/null ||
+    die 'Impossible de résoudre les paquets. Corrige les erreurs Pacman avant de continuer.'
 }

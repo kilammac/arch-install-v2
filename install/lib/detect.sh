@@ -25,7 +25,8 @@ detect_hardware() {
         if [[ $entry =~ (Sandy|Ivy|Haswell|Ironlake|HD\ Graphics\ [234][0-9]{3}) ]]; then
           HW_PACKAGES+=(libva-intel-driver)
         else HW_PACKAGES+=(intel-media-driver); fi ;;
-      *'[1002:'*) HW_PACKAGES+=(mesa vulkan-radeon libva-mesa-driver) ;;
+      # mesa fournit aussi libva-mesa-driver (nom virtuel, pas un paquet séparé).
+      *'[1002:'*) HW_PACKAGES+=(mesa vulkan-radeon) ;;
       *'[10de:'*)
         generation=$(nvidia_generation "$entry")
         # Ne jamais masquer un GPU non reconnu ou ancien dans une machine multi-GPU.
@@ -62,7 +63,7 @@ select_drivers() {
         if [[ $KERNEL == linux ]]; then HW_PACKAGES+=(linux-lts-headers); else HW_PACKAGES+=(linux-headers); fi
       fi
       HW_MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm) ;;
-    legacy|nouveau) HW_PACKAGES+=(mesa vulkan-nouveau libva-mesa-driver) ;;
+    legacy|nouveau) HW_PACKAGES+=(mesa vulkan-nouveau) ;;
     unknown) HW_NOTES+=('NVIDIA non identifié : aucun pilote propriétaire choisi automatiquement.');;
   esac
 }

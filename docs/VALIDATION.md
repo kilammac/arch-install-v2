@@ -36,3 +36,9 @@ La session graphique a également permis d’ajouter la copie du fond d’écran
 Le dépôt public `kilammac/arch-insall` a été créé. Le point d’entrée brut a été téléchargé depuis GitHub, puis exécuté avec `--bootstrap-only` et `--dry-run` : récupération de l’archive, présence des modules et simulation terminées avec succès.
 
 Le déploiement des configurations a aussi été rejoué dans la VM avec `umask 077` : le compte non privilégié peut lire le post-install, ses listes de paquets et le fond d’écran initial. Cet essai après démarrage utilise `chroot` pour les seules opérations d’attribution des fichiers ; l’installation depuis l’ISO utilise bien `arch-chroot`.
+
+## Correction du contrôle des paquets Mesa
+
+Le signalement `Indisponible : libva-mesa-driver` venait de l’utilisation de `pacman -Si` sur un nom virtuel fourni par `mesa`. Les branches AMD et nouveau demandent désormais directement `mesa`. Le contrôle avant formatage utilise `pacman -Sp` pour résoudre la transaction et les fournisseurs, sans installation ni téléchargement.
+
+Vérifications exécutées après correction : suite Bash, ShellCheck, contrôle des différences et résolutions Pacman réelles pour les profils AMD et NVIDIA nouveau. Une transaction demandant explicitement `mesa` et son nom virtuel `libva-mesa-driver` a également été résolue avec succès. Les tests vérifient qu’un échec de résolution bloque la suite. Aucune réinstallation complète en VM n’a été nécessaire pour ce changement de sélection et de vérification des paquets.

@@ -31,6 +31,8 @@ detect_hardware "$amd" '' AuthenticAMD none "$fixture"
 select_drivers
 check contains amd-ucode
 check contains vulkan-radeon
+check contains mesa
+contains libva-mesa-driver && fail 'Nom virtuel libva-mesa-driver demandé séparément sur AMD'
 contains vulkan-intel && fail 'Pilote Intel sur AMD seul'
 detect_hardware "$intel
 $nvidia" 'Bluetooth radio' GenuineIntel none "$fixture"
@@ -46,6 +48,8 @@ detect_hardware "$legacy" '' GenuineIntel none "$fixture"
 select_drivers
 check test "$HW_NVIDIA" = legacy
 check contains vulkan-nouveau
+check contains mesa
+contains libva-mesa-driver && fail 'Nom virtuel libva-mesa-driver demandé séparément sur nouveau'
 contains nvidia-open-dkms && fail 'Pilote récent sur Pascal'
 detect_hardware "$unknown" '' GenuineIntel none "$fixture"
 select_drivers
@@ -67,6 +71,20 @@ done
 check test "$(partition_path /dev/sda 1)" = /dev/sda1
 check test "$(partition_path /dev/nvme0n1 2)" = /dev/nvme0n1p2
 check test "$(partition_path /dev/mmcblk0 1)" = /dev/mmcblk0p1
+# Vérifier le contrat du contrôle avant formatage et son arrêt sur échec.
+(
+  pacman() {
+    [[ $* == "-Sp --noconfirm --print-format %n -- mesa libva-mesa-driver" ]]
+  }
+  PACKAGES=(mesa libva-mesa-driver)
+  preflight_packages
+) || fail 'La vérification doit résoudre les fournisseurs sans installation'
+if (
+  pacman() { return 1; }
+  preflight_packages
+) >/dev/null 2>&1; then
+  fail 'Une résolution impossible doit bloquer avant formatage'
+fi
 # Les commandes mutantes seraient fatales si le mode simulation les exécutait.
 mkdir "$fixture/bin"
 for command in sgdisk wipefs partprobe udevadm mkfs.fat mkfs.btrfs mkdir mount umount btrfs pacstrap arch-chroot cp chmod chown install sync sudo pacman; do
