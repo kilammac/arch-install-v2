@@ -38,3 +38,21 @@ journalctl -b -p err
 ```
 
 En cas de blocage après plusieurs échecs de Quickshell : corrige l’erreur, puis utilise `systemctl --user reset-failed quickshell.service` et `systemctl --user restart quickshell.service` depuis une session Hyprland.
+
+## `/etc/profile: Permission denied` et `I have no name!`
+
+Les premières versions de cet installateur laissaient `umask 077` actif pendant `pacstrap`. La création des dossiers intermédiaires pouvait donner le mode `700` à `/etc` et à certains parents sous `/var`. Un utilisateur ordinaire ne pouvait alors plus lire `/etc/profile` ni résoudre son nom via `/etc/passwd`.
+
+Pour réparer le système déjà démarré, ouvre une autre console (`Ctrl+Alt+F3`) et connecte-toi **directement avec root**. Depuis n’importe quel dossier :
+
+```bash
+stat -c '%a %n' /etc /etc/profile /etc/passwd /etc/group /etc/nsswitch.conf
+chmod 755 /etc /var /var/cache /var/lib
+chmod 644 /etc/profile /etc/passwd /etc/group /etc/nsswitch.conf \
+  /etc/shells /etc/hosts /etc/hostname /etc/locale.conf \
+  /etc/vconsole.conf /etc/fstab
+```
+
+Déconnecte la session utilisateur en erreur et reconnecte-toi. Ne lance pas de `chmod -R` sur `/etc` et ne rends jamais `/etc/shadow` ou `/etc/gshadow` lisibles par tous.
+
+Si la connexion root est impossible, monte le système depuis l’ISO comme indiqué plus haut, entre dans `arch-chroot /mnt`, puis exécute les mêmes commandes. Ne relance pas le formatage pour cette réparation.

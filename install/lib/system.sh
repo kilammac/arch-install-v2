@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 install_system() {
   local uuid kernel modules
-  run pacstrap -K "$TARGET" "${PACKAGES[@]}"
+  (umask 022; run pacstrap -K "$TARGET" "${PACKAGES[@]}")
   if ((DRY_RUN)); then
     info '[simulation] genfstab -U /mnt vers /mnt/etc/fstab'
     uuid=UUID-SIMULE
   else
     genfstab -U "$TARGET" > "$TARGET/etc/fstab"
+    chmod 644 "$TARGET/etc/fstab"
     uuid=$(blkid -s UUID -o value "$ROOT_PART")
     [[ -n $uuid ]] || die 'UUID Btrfs introuvable.'
   fi
@@ -26,8 +27,7 @@ LOCALEFILE
 127.0.1.1 $HOSTNAME.localdomain $HOSTNAME
 HOSTS
   chroot_run useradd -m -G wheel -s /bin/bash "$USERNAME"
-  write_file "$TARGET/etc/sudoers.d/10-wheel" <<< '%wheel ALL=(ALL:ALL) ALL'
-  run chmod 440 "$TARGET/etc/sudoers.d/10-wheel"
+  write_file "$TARGET/etc/sudoers.d/10-wheel" 440 <<< '%wheel ALL=(ALL:ALL) ALL'
   chroot_run visudo -cf /etc/sudoers
   write_file "$TARGET/etc/systemd/zram-generator.conf" <<'ZRAM'
 [zram0]

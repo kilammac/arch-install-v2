@@ -9,7 +9,7 @@ PROJECT=$(cd "$(dirname "$0")/.." && pwd)
 DRY_RUN=0; TARGET=/mnt; DISK=/dev/vda
 HOSTNAME=arch-vm; USERNAME=testeur; TIMEZONE=Africa/Algiers
 LOCALE=fr_FR.UTF-8; KEYMAP=fr; XKB_LAYOUT=fr; KERNEL=linux; EXTRA_KERNEL=1; SESSION=console; NVIDIA_MODE=
-for module in common ui detect disk packages system configs; do
+for module in common ui detect disk packages system configs permissions; do
   # shellcheck source=/dev/null
   source "$PROJECT/install/lib/$module.sh"
 done
@@ -23,5 +23,6 @@ preflight_packages
 partition_and_mount
 install_system
 install_configs
+verify_permissions
 # Saisie des mots de passe à vérifier séparément sur terminal interactif.
 printf 'VM-INSTALL-OK\n'

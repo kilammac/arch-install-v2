@@ -57,3 +57,19 @@ Vérifications exécutées :
 - Audit des fichiers et contrôle des différences.
 
 Aucune nouvelle installation ni aucun formatage n’ont été exécutés pour cette correction.
+
+## Permissions lors du premier login
+
+Le problème `/etc/profile: Permission denied` et l’absence de résolution du nom utilisateur ont été reproduits dans une VM QEMU jetable, avec un vrai `pacstrap` exécuté sous `umask 077`. Le dossier `/etc` résultant avait le mode `700`, même si `/etc/profile` avait correctement le mode `644`. Le shell de login ordinaire ne pouvait donc lire ni son profil ni les informations d’identité dans `/etc`.
+
+La réparation ciblée des dossiers `/etc`, `/var`, `/var/cache` et `/var/lib` a rétabli, dans ce système de test, la lecture du profil et la résolution de l’utilisateur. Le mode de `/etc/shadow` est resté inchangé.
+
+Corrections : masque `022` au point d’entrée et autour de `pacstrap`/des commandes chroot, modes explicites dans `write_file`, fichier sudo en `440`, fstab en `644`, journal créé en `600` sans modifier le masque global. Un contrôle des répertoires publics, fichiers d’identité/profil et fichiers privés bloque désormais la fin de l’installation en cas de droits incorrects.
+
+Vérifications exécutées :
+
+- `bash tests/permissions.sh` : reproduction de la création de parents en `700`, écritures publiques et privées sous masque hérité `077`, masque transmis à pacstrap/chroot, refus de permissions publiques ou privées incorrectes.
+- Nouveau système de base réellement créé par la commande pacstrap appelée depuis `install_system`, avec masque appelant `077`, dans la VM. L’essai s’arrête volontairement après pacstrap : il ne reconfigure pas le démarrage. Création du compte par le helper chroot corrigé, puis shell Bash de login sous ce compte : lecture de `/etc/profile`, `id -un` et `getent passwd` réussis.
+- Suite des tests de détection/simulation et de résolution Pacman, ShellCheck et contrôle des différences.
+
+Ce nouvel essai porte sur le système de base et les permissions du login ; ce n’est pas une nouvelle installation complète du bureau depuis les menus. Les essais initiaux du bureau avaient été exécutés sans reproduire le masque global de l’amorçage, ce qui avait laissé passer ce défaut.

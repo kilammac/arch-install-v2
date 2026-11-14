@@ -100,6 +100,7 @@ Consulte [docs/VALIDATION.md](docs/VALIDATION.md) pour les résultats réellemen
 # Depuis la racine du clone
 bash tests/run.sh
 bash tests/preflight-pacman.sh
+bash tests/permissions.sh
 shellcheck -x install/install.sh install/lib/*.sh post-install.sh tests/run.sh tools/*.sh
 ```
 

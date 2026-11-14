@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# Le masque privé des téléchargements/journaux ne doit pas être hérité par
+# pacstrap : ses répertoires intermédiaires doivent rester traversables.
+umask 022
 # Ne pas activer xtrace : les mots de passe passent uniquement par passwd.
 DRY_RUN=0; BOOTSTRAP_ONLY=0
 REPO=kilammac/arch-insall; REF=main
@@ -49,7 +52,7 @@ if [[ ! -f $SELF_DIR/lib/common.sh ]]; then
   exit $?
 fi
 PROJECT=$(cd "$SELF_DIR/.." && pwd)
-for module in common ui detect disk packages system configs; do
+for module in common ui detect disk packages system configs permissions; do
   # shellcheck source=/dev/null
   source "$SELF_DIR/lib/$module.sh"
 done
@@ -80,15 +83,16 @@ if ((!DRY_RUN)); then
   preflight_packages
   confirm "Effacer entièrement $DISK et installer Arch Linux ?" || die 'Annulé.'
   validate_disk
-  umask 077
   LOG_DIR=$(mktemp -d /tmp/arch-insall-log.XXXXXXXX)
   LOG_FILE="$LOG_DIR/install.log"
+  install -m600 /dev/null "$LOG_FILE"
   exec > >(tee -a "$LOG_FILE") 2>&1
   printf 'Journal : %s\n' "$LOG_FILE"
 fi
 partition_and_mount
 install_system
 install_configs
+verify_permissions
 set_passwords
 if ((!DRY_RUN)); then
   install -Dm600 "$LOG_FILE" "$TARGET/var/log/arch-insall.log"
