@@ -77,10 +77,10 @@ done
 
 if [ "$NEXT_TARGET_FOUND" == "false" ]; then
     if [ "$CURRENT_WINDOWS" -eq 0 ]; then
-       
+
         TARGET_ID=$LOWEST_ACTIVE
     else
-        
+
         TARGET_ID=$((CURRENT_ID + 1))
         while grep -qx "$TARGET_ID" <<< "$ALL_IDS_LIST"; do
             TARGET_ID=$((TARGET_ID + 1))

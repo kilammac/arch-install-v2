@@ -35,5 +35,5 @@ M.config = {
 	general = M.general,
 	group = M.group,
 }
-        
+
 return M

@@ -30,3 +30,9 @@ Le premier essai en VM a révélé deux problèmes corrigés : la dépendance `x
 - Pas de mesure de performances, de test d’hibernation ou de restauration de snapshots, ces deux dernières fonctions étant hors périmètre.
 
 La session graphique a également permis d’ajouter la copie du fond d’écran initial dans `~/Pictures/wallpaper`, utilisé par le sélecteur Quickshell. Les droits de lecture du projet installé dans `/opt/arch-insall` sont explicitement fixés pour rester corrects avec un `umask` restrictif.
+
+## Publication GitHub
+
+Le dépôt public `kilammac/arch-insall` a été créé. Le point d’entrée brut a été téléchargé depuis GitHub, puis exécuté avec `--bootstrap-only` et `--dry-run` : récupération de l’archive, présence des modules et simulation terminées avec succès.
+
+Le déploiement des configurations a aussi été rejoué dans la VM avec `umask 077` : le compte non privilégié peut lire le post-install, ses listes de paquets et le fond d’écran initial. Cet essai après démarrage utilise `chroot` pour les seules opérations d’attribution des fichiers ; l’installation depuis l’ISO utilise bien `arch-chroot`.
